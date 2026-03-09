@@ -1,0 +1,363 @@
+---
+title: "Deployment"
+description: "Deploy MasterLabel to production environments"
+---
+
+## Overview
+
+MasterLabel is an ASP.NET Core 8.0 web application that can be deployed to various hosting environments including IIS, Kestrel (standalone), or containerized platforms.
+
+## Requirements
+
+### Runtime Requirements
+
+- **.NET 8.0 Runtime**: ASP.NET Core Runtime 8.0 or later
+- **Operating System**: Windows Server 2016+, Linux, or macOS
+- **SQL Server**: LocalDB (development), SQL Server Express, or SQL Server (any edition)
+- **Web Server**: IIS 10+ (Windows) or Kestrel (cross-platform)
+
+### Dependencies
+
+The application requires the following NuGet package:
+- `System.Data.SqlClient` v4.9.0 (included in build)
+
+<Note>
+The .NET 8.0 SDK is only required for building the application. Production servers only need the ASP.NET Core Runtime.
+</Note>
+
+## Build and Publish
+
+<Steps>
+  <Step title="Build the Application">
+    Navigate to the project directory and build the application:
+
+    ```bash
+    cd MasterLabel
+    dotnet build --configuration Release
+    ```
+  </Step>
+
+  <Step title="Publish for Deployment">
+    Create a self-contained or framework-dependent deployment:
+
+    ```bash
+    # Framework-dependent deployment (requires .NET runtime on server)
+    dotnet publish --configuration Release --output ./publish
+
+    # Self-contained deployment for Windows (includes runtime)
+    dotnet publish --configuration Release --runtime win-x64 --self-contained --output ./publish
+
+    # Self-contained deployment for Linux
+    dotnet publish --configuration Release --runtime linux-x64 --self-contained --output ./publish
+    ```
+
+    <Tip>
+    Framework-dependent deployments are smaller and easier to patch. Use self-contained deployments when you cannot install the .NET runtime on the target server.
+    </Tip>
+  </Step>
+
+  <Step title="Copy Files to Server">
+    Transfer the contents of the `./publish` folder to your production server:
+
+    ```bash
+    # Example using xcopy (Windows)
+    xcopy /E /I .\\publish \\\\WEBSERVER\\c$\\inetpub\\masterlabel\\
+
+    # Example using scp (Linux)
+    scp -r ./publish/* user@webserver:/var/www/masterlabel/
+    ```
+  </Step>
+</Steps>
+
+## Deployment Options
+
+### Option 1: IIS Deployment (Windows)
+
+<Steps>
+  <Step title="Install Prerequisites">
+    Install the ASP.NET Core Hosting Bundle on the IIS server:
+
+    1. Download the [.NET 8.0 Hosting Bundle](https://dotnet.microsoft.com/download/dotnet/8.0)
+    2. Run the installer
+    3. Restart IIS: `iisreset`
+  </Step>
+
+  <Step title="Create IIS Application">
+    Configure IIS to host the application:
+
+    1. Open **IIS Manager**
+    2. Create a new **Application Pool**:
+       - Name: `MasterLabelAppPool`
+       - .NET CLR Version: **No Managed Code**
+       - Managed Pipeline Mode: **Integrated**
+    3. Create a new **Website** or **Application**:
+       - Physical Path: `C:\\inetpub\\masterlabel`
+       - Application Pool: `MasterLabelAppPool`
+       - Binding: HTTP on port 80 (or HTTPS on 443)
+  </Step>
+
+  <Step title="Configure Permissions">
+    Grant the Application Pool identity access to the application folder and database:
+
+    ```powershell
+    # Grant file system permissions
+    icacls "C:\\inetpub\\masterlabel" /grant "IIS AppPool\\MasterLabelAppPool:(OI)(CI)RX" /T
+
+    # Grant SQL Server permissions (if using Windows Auth)
+    # Add 'IIS AppPool\\MasterLabelAppPool' as a login in SQL Server
+    ```
+  </Step>
+
+  <Step title="Configure Connection String">
+    Update `appsettings.json` with production connection string:
+
+    ```json
+    {
+      "ConnectionStrings": {
+        "SqlConnection": "Server=SQLSERVER01;Database=MasterLabelDB;Integrated Security=True;TrustServerCertificate=True;"
+      }
+    }
+    ```
+
+    <Warning>
+    For IIS deployments using Windows Authentication, ensure the Application Pool identity has appropriate SQL Server permissions.
+    </Warning>
+  </Step>
+</Steps>
+
+### Option 2: Kestrel Standalone (Cross-Platform)
+
+<Steps>
+  <Step title="Configure Application">
+    Create or update `appsettings.Production.json`:
+
+    ```json
+    {
+      "Logging": {
+        "LogLevel": {
+          "Default": "Warning",
+          "Microsoft.AspNetCore": "Warning"
+        }
+      },
+      "AllowedHosts": "*",
+      "ConnectionStrings": {
+        "SqlConnection": "Server=SQLSERVER01;Database=MasterLabelDB;User Id=masterlabel_app;Password=SecurePassword;"
+      },
+      "Kestrel": {
+        "Endpoints": {
+          "Http": {
+            "Url": "http://0.0.0.0:5000"
+          }
+        }
+      }
+    }
+    ```
+  </Step>
+
+  <Step title="Run as a Service">
+    **Windows Service:**
+
+    ```powershell
+    # Install as Windows Service
+    sc create MasterLabel binPath="C:\\Apps\\MasterLabel\\MasterLabel.exe"
+    sc config MasterLabel start=auto
+    sc start MasterLabel
+    ```
+
+    **Linux systemd Service:**
+
+    Create `/etc/systemd/system/masterlabel.service`:
+
+    ```ini
+    [Unit]
+    Description=MasterLabel Web Application
+    After=network.target
+
+    [Service]
+    Type=notify
+    WorkingDirectory=/var/www/masterlabel
+    ExecStart=/var/www/masterlabel/MasterLabel
+    Restart=always
+    RestartSec=10
+    User=www-data
+    Environment=ASPNETCORE_ENVIRONMENT=Production
+    Environment=DOTNET_PRINT_TELEMETRY_MESSAGE=false
+
+    [Install]
+    WantedBy=multi-user.target
+    ```
+
+    Enable and start the service:
+
+    ```bash
+    sudo systemctl enable masterlabel
+    sudo systemctl start masterlabel
+    sudo systemctl status masterlabel
+    ```
+  </Step>
+
+  <Step title="Configure Reverse Proxy (Optional)">
+    For production, use Nginx or Apache as a reverse proxy:
+
+    **Nginx configuration:**
+
+    ```nginx
+    server {
+        listen 80;
+        server_name masterlabel.example.com;
+
+        location / {
+            proxy_pass http://localhost:5000;
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection keep-alive;
+            proxy_set_header Host $host;
+            proxy_cache_bypass $http_upgrade;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+    }
+    ```
+  </Step>
+</Steps>
+
+## Environment Configuration
+
+### Configuration Files
+
+MasterLabel uses a hierarchical configuration system:
+
+1. **appsettings.json** - Base configuration (checked into source control)
+2. **appsettings.Development.json** - Development overrides
+3. **appsettings.Production.json** - Production overrides
+4. **Environment Variables** - Highest priority (recommended for secrets)
+
+<Tip>
+ASP.NET Core automatically loads the appropriate `appsettings.{Environment}.json` file based on the `ASPNETCORE_ENVIRONMENT` variable.
+</Tip>
+
+### Setting Environment Variables
+
+**Windows (IIS):**
+```xml
+<!-- web.config -->
+<configuration>
+  <system.webServer>
+    <aspNetCore processPath="dotnet" arguments=".\\MasterLabel.dll">
+      <environmentVariables>
+        <environmentVariable name="ASPNETCORE_ENVIRONMENT" value="Production" />
+      </environmentVariables>
+    </aspNetCore>
+  </system.webServer>
+</configuration>
+```
+
+**Windows (Command Line):**
+```powershell
+setx ASPNETCORE_ENVIRONMENT "Production"
+```
+
+**Linux:**
+```bash
+export ASPNETCORE_ENVIRONMENT=Production
+```
+
+## Production Considerations
+
+<Warning>
+**Before deploying to production:**
+
+- Remove or secure development connection strings
+- Set `ASPNETCORE_ENVIRONMENT=Production`
+- Enable HTTPS with valid SSL certificates
+- Configure logging to file or external service
+- Set up database backups
+- Configure firewall rules
+- Review and minimize exposed ports
+</Warning>
+
+### Security Checklist
+
+- [ ] Connection strings stored in environment variables or Key Vault
+- [ ] HTTPS enabled with valid SSL certificate
+- [ ] SQL Server access restricted to application server IP
+- [ ] Windows/SQL authentication properly configured
+- [ ] Application pool identity has minimum required permissions
+- [ ] `appsettings.Production.json` excluded from source control
+- [ ] Error pages do not expose sensitive information
+
+### Performance Optimization
+
+- [ ] Enable response compression
+- [ ] Configure caching policies for static assets
+- [ ] Set appropriate database connection pool size
+- [ ] Monitor application performance and logs
+- [ ] Set up health check endpoints
+
+## Monitoring and Logs
+
+By default, logs are written to the console. In production, configure logging to persistent storage:
+
+```json
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning"
+    },
+    "File": {
+      "Path": "logs/masterlabel-.log",
+      "RollingInterval": "Day"
+    }
+  }
+}
+```
+
+<Note>
+For IIS deployments, enable the ASP.NET Core Module log to troubleshoot startup issues. Check `C:\\inetpub\\logs\\stdout` for stdout logs.
+</Note>
+
+## Updating the Application
+
+To update the application:
+
+1. **Stop the application** (stop IIS site or systemd service)
+2. **Backup the current version** (optional but recommended)
+3. **Copy new published files** to the application directory
+4. **Verify configuration files** are preserved
+5. **Start the application** and verify it's running
+
+```bash
+# Example update process for IIS
+iisreset /stop
+xcopy /E /Y .\\publish\\* C:\\inetpub\\masterlabel\\
+iisreset /start
+```
+
+## Troubleshooting
+
+### Application Won't Start
+
+1. Check the event logs (Windows) or systemd journal (Linux)
+2. Verify .NET 8.0 runtime is installed
+3. Check file permissions on application directory
+4. Validate connection string syntax
+5. Ensure database is accessible from application server
+
+### Database Connection Errors
+
+- Verify SQL Server is running and accessible
+- Test connection string using `sqlcmd`
+- Check firewall rules between app and database servers
+- Verify SQL Server authentication mode matches connection string
+
+### 500 Internal Server Error
+
+- Enable detailed error pages temporarily (set `ASPNETCORE_ENVIRONMENT=Development`)
+- Check application logs for exceptions
+- Verify all required files were deployed
+- Check IIS Application Pool is running
+
+<Tip>
+For detailed deployment troubleshooting, enable ASP.NET Core Module (ANCM) logs by setting `stdoutLogEnabled="true"` in `web.config`.
+</Tip>

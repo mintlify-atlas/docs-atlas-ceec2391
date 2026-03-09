@@ -1,80 +1,286 @@
 ---
 title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+description: "Get MasterLabel up and running in minutes and log your first label printing incident."
 ---
 
-## Get started in three steps
+## Prerequisites
 
-Get your documentation site running locally and make your first customization.
-
-### Step 1: Set up your local environment
-
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 2: Deploy your changes
-
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
-
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
-
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 3: Go live
-
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
-
-## Next steps
-
-Now that you have your docs running, explore these key features:
+Before you begin, ensure you have the following installed:
 
 <CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
+  <Card title=".NET 8.0 SDK" icon="code">
+    Download from [dotnet.microsoft.com](https://dotnet.microsoft.com/download)
+  </Card>
+  
+  <Card title="SQL Server" icon="database">
+    SQL Server 2019+ or SQL Server LocalDB for development
+  </Card>
 </CardGroup>
 
 <Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
+  This guide uses SQL Server LocalDB for development. For production deployments, use a full SQL Server instance.
 </Note>
+
+## Installation
+
+<Steps>
+  <Step title="Clone or extract the source code">
+    Extract the MasterLabel application source code to your local machine.
+    
+    ```bash
+    cd /path/to/MasterLabel
+    ```
+  </Step>
+
+  <Step title="Set up the database">
+    Create the MasterLabel database using the provided SQL script:
+    
+    ```sql
+    CREATE DATABASE [MasterLabelDB]
+     CONTAINMENT = NONE
+     ON PRIMARY 
+    ( NAME = N'MasterLabelDB', FILENAME = N'C:\\MasterLabelDB.mdf' , 
+      SIZE = 8192KB , MAXSIZE = UNLIMITED, FILEGROWTH = 65536KB )
+     LOG ON 
+    ( NAME = N'MasterLabelDB_log', FILENAME = N'C:\\MasterLabelDB_log.ldf' , 
+      SIZE = 8192KB , MAXSIZE = 2048GB , FILEGROWTH = 65536KB )
+    GO
+
+    USE [MasterLabelDB]
+    GO
+
+    CREATE TABLE [dbo].[LabelData](
+        [Id] [int] IDENTITY(1,1) NOT NULL,
+        [JobId] [int] NULL,
+        [SerialNumber] [varchar](50) NULL,
+        [Job] [varchar](50) NULL,
+        [Item] [varchar](50) NULL,
+        [Description] [varchar](max) NULL,
+        [OrderNumber] [decimal](18, 0) NULL,
+        [OrderLine] [varchar](20) NULL,
+        [LPN] [varchar](50) NULL,
+        [TagNumber] [varchar](100) NULL,
+        [ShipCode] [varchar](10) NULL,
+        [IRNO] [varchar](100) NULL,
+        [Subinv] [varchar](50) NULL,
+        [FullAddress] [varchar](max) NULL,
+        [CreatedDate] [datetime] NULL DEFAULT (getdate()),
+        CONSTRAINT [PK__LabelDat__3214EC07D2298E42] PRIMARY KEY CLUSTERED ([Id] ASC)
+    )
+    GO
+
+    CREATE NONCLUSTERED INDEX [IX_LabelData_SerialNumber] 
+    ON [dbo].[LabelData] ([SerialNumber] ASC)
+    GO
+    ```
+    
+    <Tip>
+      Run the complete `MasterLabel.sql` script provided in the source code to create the database with all configurations.
+    </Tip>
+  </Step>
+
+  <Step title="Configure the connection string">
+    Update the `appsettings.json` file with your SQL Server connection details:
+    
+    <CodeGroup>
+    ```json LocalDB (Development)
+    {
+      "ConnectionStrings": {
+        "SqlConnection": "Server=(localdb)\\mssqllocaldb;Database=MasterLabelDB;Trusted_Connection=True;"
+      }
+    }
+    ```
+    
+    ```json SQL Server (Production)
+    {
+      "ConnectionStrings": {
+        "SqlConnection": "Server=your-server;Database=MasterLabelDB;User Id=your-user;Password=your-password;"
+      }
+    }
+    ```
+    
+    ```json SQL Server (Windows Auth)
+    {
+      "ConnectionStrings": {
+        "SqlConnection": "Server=your-server;Database=MasterLabelDB;Integrated Security=True;"
+      }
+    }
+    ```
+    </CodeGroup>
+    
+    <Note>
+      The default configuration uses LocalDB. Update the connection string based on your environment.
+    </Note>
+  </Step>
+
+  <Step title="Restore dependencies">
+    Install the required NuGet packages:
+    
+    ```bash
+    dotnet restore
+    ```
+  </Step>
+
+  <Step title="Run the application">
+    Start the development server:
+    
+    ```bash
+    dotnet run
+    ```
+    
+    The application will start on `https://localhost:5001` (or the port specified in your launch settings).
+    
+    ```bash
+    info: Microsoft.Hosting.Lifetime[14]
+          Now listening on: https://localhost:5001
+    info: Microsoft.Hosting.Lifetime[0]
+          Application started. Press Ctrl+C to shut down.
+    ```
+  </Step>
+</Steps>
+
+## Logging Your First Incident
+
+Once the application is running, follow these steps to log your first label printing incident:
+
+<Steps>
+  <Step title="Navigate to the application">
+    Open your browser and go to `https://localhost:5001`
+  </Step>
+
+  <Step title="Search for label data">
+    Enter a serial number in the search field to retrieve label information from the Oracle Support Dashboard.
+    
+    The application will call the Oracle Support Dashboard API:
+    
+    ```csharp
+    [HttpPost]
+    public async Task<IActionResult> GetReportData([FromBody] SearchParameters parameters)
+    {
+        var requestUrl = $"{BaseUrl}GetReportData?id=2154&parameters={{\"serial_number\":\"{parameters.SerialNumber}\"}}";
+        var response = await _httpClient.PostAsync(requestUrl, null);
+        
+        if (response.IsSuccessStatusCode)
+        {
+            var jsonResult = await response.Content.ReadAsStringAsync();
+            return Json(jsonResult);
+        }
+        // Error handling...
+    }
+    ```
+  </Step>
+
+  <Step title="Review the retrieved data">
+    The application will display label information including:
+    - Serial Number
+    - Job details
+    - Item and Description
+    - Order Number and Line
+    - LPN (License Plate Number)
+    - Tag Number
+    - Ship Code
+    - Subinventory
+    - Full Address
+  </Step>
+
+  <Step title="Save the incident">
+    Click the save button to log the incident to the database. The data is saved using:
+    
+    ```csharp
+    [HttpPost]
+    public IActionResult SaveLabelData([FromBody] ReportData data)
+    {
+        string connectionString = _configuration.GetConnectionString("SqlConnection");
+        using (SqlConnection connection = new SqlConnection(connectionString))
+        {
+            connection.Open();
+            
+            string sql = @"INSERT INTO LabelData 
+                        (SerialNumber, Job, Item, Description, OrderNumber, OrderLine, 
+                         LPN, TagNumber, ShipCode, IRNO, Subinv, FullAddress, CreatedDate)
+                        VALUES 
+                        (@SerialNumber, @Job, @Item, @Description, @OrderNumber, @OrderLine,
+                         @LPN, @TagNumber, @ShipCode, @IRNO, @Subinv, @Address, @Date)";
+            
+            using (SqlCommand command = new SqlCommand(sql, connection))
+            {
+                // Parameter binding...
+                command.ExecuteNonQuery();
+            }
+        }
+        
+        return Json(new { success = true, message = "Datos guardados correctamente" });
+    }
+    ```
+    
+    <Tip>
+      The `CreatedDate` is automatically set to the current timestamp when saving.
+    </Tip>
+  </Step>
+
+  <Step title="Verify the incident was logged">
+    Query the database to confirm the incident was saved:
+    
+    ```sql
+    SELECT TOP 10 * 
+    FROM LabelData 
+    ORDER BY CreatedDate DESC
+    ```
+  </Step>
+</Steps>
+
+## Application Structure
+
+Understanding the key components:
+
+```csharp Program.cs
+var builder = WebApplication.CreateBuilder(args);
+
+// Add services to the container
+builder.Services.AddControllersWithViews();
+builder.Services.AddHttpClient();  // For Oracle Support Dashboard API calls
+
+var app = builder.Build();
+
+// Configure the HTTP request pipeline
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler("/Home/Error");
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+app.UseRouting();
+app.UseAuthorization();
+
+app.MapControllerRoute(
+    name: "default",
+    pattern: "{controller=Home}/{action=Index}/{id?}");
+
+app.Run();
+```
+
+<Note>
+  The application uses the standard ASP.NET Core MVC pattern with controllers handling HTTP requests and Razor views for the UI.
+</Note>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Incident Logging" icon="clipboard-list" href="/features/incident-logging">
+    Learn about the full incident logging workflow
+  </Card>
+  
+  <Card title="API Reference" icon="code" href="/api/overview">
+    Explore the API endpoints in detail
+  </Card>
+  
+  <Card title="Database Setup" icon="database" href="/configuration/database-setup">
+    Learn more about the database schema and configuration
+  </Card>
+  
+  <Card title="Data Search" icon="magnifying-glass" href="/features/data-search">
+    Understand the Oracle Support Dashboard integration
+  </Card>
+</CardGroup>

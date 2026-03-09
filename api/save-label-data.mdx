@@ -1,0 +1,294 @@
+---
+title: 'Save Label Data'
+description: 'Save label information to the database'
+---
+
+## Endpoint
+
+```
+POST /Home/SaveLabelData
+```
+
+## Description
+
+Saves equipment label data to the SQL Server database. This endpoint inserts a new record into the `LabelData` table with all provided information.
+
+## Method Signature
+
+```csharp HomeController.cs
+[HttpPost]
+public IActionResult SaveLabelData([FromBody] ReportData data)
+```
+
+## Request Parameters
+
+All fields are optional but should be provided when available for complete label information.
+
+<ParamField body="SerialNumber" type="string">
+  Equipment serial number
+</ParamField>
+
+<ParamField body="Job" type="string">
+  Job identifier
+</ParamField>
+
+<ParamField body="Item" type="string">
+  Item code or identifier
+</ParamField>
+
+<ParamField body="Description" type="string">
+  Item or equipment description
+</ParamField>
+
+<ParamField body="OrderNumber" type="string">
+  Order number (will be converted to decimal for storage)
+</ParamField>
+
+<ParamField body="OrderLine" type="string">
+  Order line number
+</ParamField>
+
+<ParamField body="LPN" type="string">
+  License Plate Number
+</ParamField>
+
+<ParamField body="TagNumber" type="string">
+  Equipment tag number
+</ParamField>
+
+<ParamField body="ShipCode" type="string">
+  Shipping code
+</ParamField>
+
+<ParamField body="IRNO" type="string">
+  IR Number
+</ParamField>
+
+<ParamField body="Subinv" type="string">
+  Subinventory code
+</ParamField>
+
+<ParamField body="Address" type="string">
+  Full shipping or installation address
+</ParamField>
+
+<ParamField body="Date" type="datetime">
+  Date for the label (defaults to current date/time if not provided)
+</ParamField>
+
+### Request Body Example
+
+```json
+{
+  "SerialNumber": "12345ABC",
+  "Job": "JOB-2024-001",
+  "Item": "ITEM-500",
+  "Description": "Industrial Chiller Unit",
+  "OrderNumber": "1001234",
+  "OrderLine": "1",
+  "LPN": "LPN123456",
+  "TagNumber": "TAG-789",
+  "ShipCode": "SHIP-01",
+  "IRNO": "IR-2024-100",
+  "Subinv": "SUB-A",
+  "Address": "123 Industrial Park, City, State, ZIP",
+  "Date": "2024-03-15T10:30:00"
+}
+```
+
+## Response
+
+<ResponseField name="success" type="boolean" required>
+  Indicates whether the save operation succeeded
+</ResponseField>
+
+<ResponseField name="message" type="string" required>
+  Success or error message in Spanish
+</ResponseField>
+
+### Success Response
+
+```json
+{
+  "success": true,
+  "message": "Datos guardados correctamente"
+}
+```
+
+### Error Response
+
+```json
+{
+  "success": false,
+  "message": "Cannot insert the value NULL into column 'SerialNumber'"
+}
+```
+
+## SQL Database Schema
+
+Data is inserted into the `LabelData` table with the following mapping:
+
+| Request Field | Database Column | Type | Notes |
+|---------------|-----------------|------|-------|
+| SerialNumber | SerialNumber | string | |
+| Job | Job | string | |
+| Item | Item | string | |
+| Description | Description | string | |
+| OrderNumber | OrderNumber | decimal | Converted from string |
+| OrderLine | OrderLine | string | |
+| LPN | LPN | string | |
+| TagNumber | TagNumber | string | |
+| ShipCode | ShipCode | string | |
+| IRNO | IRNO | string | |
+| Subinv | Subinv | string | |
+| Address | FullAddress | string | |
+| Date | CreatedDate | datetime | Defaults to DateTime.Now |
+
+## Implementation
+
+```csharp HomeController.cs
+[HttpPost]
+public IActionResult SaveLabelData([FromBody] ReportData data)
+{
+    try
+    {
+        string connectionString = _configuration.GetConnectionString("SqlConnection");
+        using (SqlConnection connection = new SqlConnection(connectionString))
+        {
+            connection.Open();
+
+            string sql = @"INSERT INTO LabelData 
+                        (SerialNumber, Job, Item, Description, OrderNumber, OrderLine, 
+                         LPN, TagNumber, ShipCode, IRNO, Subinv, FullAddress, CreatedDate)
+                        VALUES 
+                        (@SerialNumber, @Job, @Item, @Description, @OrderNumber, @OrderLine,
+                         @LPN, @TagNumber, @ShipCode, @IRNO, @Subinv, @Address, @Date)";
+
+            using (SqlCommand command = new SqlCommand(sql, connection))
+            {
+                command.Parameters.AddWithValue("@SerialNumber", data.SerialNumber ?? (object)DBNull.Value);
+                command.Parameters.AddWithValue("@Job", data.Job ?? (object)DBNull.Value);
+                command.Parameters.AddWithValue("@Item", data.Item ?? (object)DBNull.Value);
+                command.Parameters.AddWithValue("@Description", data.Description ?? (object)DBNull.Value);
+                command.Parameters.AddWithValue("@OrderNumber", string.IsNullOrEmpty(data.OrderNumber) ? (object)DBNull.Value : decimal.Parse(data.OrderNumber));
+                command.Parameters.AddWithValue("@OrderLine", data.OrderLine ?? (object)DBNull.Value);
+                command.Parameters.AddWithValue("@LPN", data.LPN ?? (object)DBNull.Value);
+                command.Parameters.AddWithValue("@TagNumber", data.TagNumber ?? (object)DBNull.Value);
+                command.Parameters.AddWithValue("@ShipCode", data.ShipCode ?? (object)DBNull.Value);
+                command.Parameters.AddWithValue("@IRNO", data.IRNO ?? (object)DBNull.Value);
+                command.Parameters.AddWithValue("@Subinv", data.Subinv ?? (object)DBNull.Value);
+                command.Parameters.AddWithValue("@Address", data.Address ?? (object)DBNull.Value);
+                command.Parameters.AddWithValue("@Date", data.Date ?? DateTime.Now);
+
+                command.ExecuteNonQuery();
+            }
+        }
+
+        return Json(new { success = true, message = "Datos guardados correctamente" });
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "Error al guardar los datos en la base de datos");
+        return Json(new { success = false, message = ex.Message });
+    }
+}
+```
+
+## cURL Example
+
+```bash
+curl -X POST https://your-domain.com/Home/SaveLabelData \
+  -H "Content-Type: application/json" \
+  -d '{
+    "SerialNumber": "12345ABC",
+    "Job": "JOB-2024-001",
+    "Item": "ITEM-500",
+    "Description": "Industrial Chiller Unit",
+    "OrderNumber": "1001234",
+    "OrderLine": "1",
+    "LPN": "LPN123456",
+    "TagNumber": "TAG-789",
+    "ShipCode": "SHIP-01",
+    "IRNO": "IR-2024-100",
+    "Subinv": "SUB-A",
+    "Address": "123 Industrial Park, City, State, ZIP"
+  }'
+```
+
+## Error Handling
+
+The endpoint handles several error scenarios:
+
+<AccordionGroup>
+  <Accordion title="Database Connection Failure">
+    When unable to connect to SQL Server:
+    
+    ```json
+    {
+      "success": false,
+      "message": "A network-related or instance-specific error occurred"
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="Invalid OrderNumber Format">
+    When OrderNumber cannot be converted to decimal:
+    
+    ```json
+    {
+      "success": false,
+      "message": "Input string was not in a correct format"
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="Constraint Violations">
+    When database constraints are violated (e.g., duplicate keys, null constraints):
+    
+    ```json
+    {
+      "success": false,
+      "message": "Violation of PRIMARY KEY constraint"
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Related Models
+
+### ReportData
+
+```csharp ReportData.cs
+public class ReportData
+{
+    public string SerialNumber { get; set; }
+    public string Job { get; set; }
+    public string Item { get; set; }
+    public string Description { get; set; }
+    public string OrderNumber { get; set; }
+    public string OrderLine { get; set; }
+    public string LPN { get; set; }
+    public string TagNumber { get; set; }
+    public string ShipCode { get; set; }
+    public string IRNO { get; set; }
+    public string Subinv { get; set; }
+    public DateTime? Date { get; set; }
+    public string Address { get; set; }
+}
+```
+
+## Best Practices
+
+<Tip>
+  Always provide a Date field to maintain accurate records. If omitted, the system will use the current server time.
+</Tip>
+
+<Warning>
+  The OrderNumber field must be a valid decimal number or empty. Invalid formats will cause the save operation to fail.
+</Warning>
+
+## Next Steps
+
+<Card title="Get Report Data" icon="arrow-left" href="/api/get-report-data">
+  Learn how to retrieve data before saving
+</Card>

@@ -1,0 +1,198 @@
+---
+title: "Reporting & Analytics"
+description: "Export incident data and analyze production line error patterns"
+---
+
+## Overview
+
+The Reporting & Analytics feature provides visibility into label printing errors across production lines. By aggregating incident data stored in the SQL database, managers and quality engineers can identify patterns, troubleshoot recurring issues, and improve manufacturing processes.
+
+## Dashboard Capabilities
+
+The MasterLabel system supports comprehensive analysis through its SQL database, enabling stakeholders to:
+
+### Error Pattern Identification
+
+<Info>
+  The system tracks all incidents with timestamps, allowing trend analysis over time. Quality teams can identify whether errors are increasing, decreasing, or occurring in patterns related to shifts, days of the week, or specific time periods.
+</Info>
+
+### Production Line Analysis
+
+By analyzing the collected data, you can determine:
+- **Which production lines have the most errors**: Identify problematic lines that may need equipment maintenance or operator training
+- **Error frequency by line**: Compare error rates across different manufacturing areas
+- **Correlation with specific jobs or items**: Determine if certain products are more prone to label printing errors
+
+### Weekly Trend Analysis
+
+The `CreatedDate` field enables time-based analysis:
+- Track error trends week-over-week
+- Identify peak error periods
+- Correlate errors with production schedule changes
+- Monitor the effectiveness of corrective actions
+
+### Affected Units Per Line
+
+Analyze the impact of label errors by:
+- Counting total affected units per production line
+- Identifying which items have the highest error rates
+- Tracking the volume of incidents requiring rework or relabeling
+
+## Database Structure
+
+The `LabelData` table stores all incident information:
+
+```sql
+INSERT INTO LabelData 
+  (SerialNumber, Job, Item, Description, OrderNumber, OrderLine, 
+   LPN, TagNumber, ShipCode, IRNO, Subinv, FullAddress, CreatedDate)
+VALUES 
+  (@SerialNumber, @Job, @Item, @Description, @OrderNumber, @OrderLine,
+   @LPN, @TagNumber, @ShipCode, @IRNO, @Subinv, @Address, @Date)
+```
+
+### Key Fields for Analysis
+
+| Field | Analytics Use Case |
+|-------|--------------------|
+| SerialNumber | Track individual unit incidents and repeat errors |
+| Job | Identify problematic job numbers with high error rates |
+| Item | Analyze which products have labeling issues |
+| OrderNumber | Group errors by production order for batch analysis |
+| Subinv | Identify which subinventory locations have the most errors |
+| CreatedDate | Enable time-series analysis and trend identification |
+| ShipCode | Correlate errors with specific shipping destinations |
+
+## Excel Export Functionality
+
+The reporting system includes Excel export capabilities, allowing users to:
+
+### Export Raw Data
+
+Generate Excel spreadsheets containing filtered incident records with all captured fields. Users can specify date ranges, production lines, or specific items to export.
+
+### Custom Analysis
+
+With data in Excel format, quality engineers can:
+- Create pivot tables to analyze errors by multiple dimensions
+- Generate charts and graphs for management presentations
+- Perform statistical analysis on error rates
+- Share data with Oracle Support or equipment vendors
+
+### Integration with Oracle Support
+
+Exported data can be uploaded to Oracle Support cases when escalating systemic issues or requesting vendor assistance with label printer problems.
+
+<Info>
+  Excel exports include all fields from the LabelData table, ensuring comprehensive data availability for downstream analysis and reporting needs.
+</Info>
+
+## Common Analytical Queries
+
+The SQL database structure supports various analytical queries:
+
+### Errors by Production Line (Week)
+
+```sql
+SELECT 
+    Subinv as ProductionLine,
+    COUNT(*) as ErrorCount
+FROM LabelData
+WHERE CreatedDate >= DATEADD(week, -1, GETDATE())
+GROUP BY Subinv
+ORDER BY ErrorCount DESC
+```
+
+### Most Problematic Items
+
+```sql
+SELECT 
+    Item,
+    Description,
+    COUNT(*) as IncidentCount
+FROM LabelData
+GROUP BY Item, Description
+ORDER BY IncidentCount DESC
+```
+
+### Weekly Error Trend
+
+```sql
+SELECT 
+    DATEPART(week, CreatedDate) as WeekNumber,
+    DATEPART(year, CreatedDate) as Year,
+    COUNT(*) as ErrorCount
+FROM LabelData
+GROUP BY DATEPART(week, CreatedDate), DATEPART(year, CreatedDate)
+ORDER BY Year DESC, WeekNumber DESC
+```
+
+### Errors by Shipping Destination
+
+```sql
+SELECT 
+    ShipCode,
+    COUNT(*) as ErrorCount
+FROM LabelData
+WHERE ShipCode IS NOT NULL
+GROUP BY ShipCode
+ORDER BY ErrorCount DESC
+```
+
+## Key Performance Indicators
+
+The reporting system enables tracking of important KPIs:
+
+### Error Rate
+- Total label printing errors per day/week/month
+- Error rate as percentage of total production volume
+- Error rate by production line
+
+### Response Time
+- Time from error occurrence to incident logging
+- Time from incident logging to resolution
+
+### Repeat Errors
+- Same serial numbers with multiple incidents
+- Recurring issues with specific items or jobs
+
+### Production Impact
+- Number of units requiring relabeling
+- Production delays due to label errors
+- Cost impact of label waste and rework
+
+## Dashboard Visualization
+
+While the current implementation focuses on data collection and Excel export, the database structure supports future dashboard development with:
+
+- Real-time error monitoring displays
+- Heat maps showing error concentration by production area
+- Time-series charts showing error trends
+- Drill-down capabilities from summary to individual incidents
+
+<Info>
+  The MasterLabelDB database uses SQL Server, enabling integration with business intelligence tools like Power BI, Tableau, or SSRS for advanced visualization and reporting capabilities.
+</Info>
+
+## Report Distribution
+
+Analytical reports can be distributed to key stakeholders:
+
+- **Production Managers**: Daily summaries of errors by line
+- **Quality Engineers**: Weekly trend analysis and root cause investigation data
+- **Maintenance Teams**: Reports identifying equipment-related error patterns
+- **Executive Leadership**: Monthly KPI dashboards showing overall quality metrics
+
+## Data Retention
+
+All incident data is retained in the SQL database, providing historical context for:
+- Long-term trend analysis
+- Year-over-year comparisons
+- Correlation with process changes or equipment upgrades
+- Regulatory compliance and quality audits
+
+## Related Features
+
+- [Incident Logging](/features/incident-logging) - Capture data that feeds into reports
+- [Data Search](/features/data-search) - Verify incident details before analysis

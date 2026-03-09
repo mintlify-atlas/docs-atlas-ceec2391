@@ -1,0 +1,160 @@
+---
+title: 'Get Report Data'
+description: 'Retrieve equipment report data by serial number'
+---
+
+## Endpoint
+
+```
+POST /Home/GetReportData
+```
+
+## Description
+
+Retrieves equipment report data from the Oracle Support Dashboard by serial number. This endpoint acts as a proxy to the external Oracle system and returns comprehensive equipment information.
+
+## Method Signature
+
+```csharp HomeController.cs
+[HttpPost]
+public async Task<IActionResult> GetReportData([FromBody] SearchParameters parameters)
+```
+
+## Request Parameters
+
+<ParamField body="SerialNumber" type="string" required>
+  The equipment serial number to search for
+</ParamField>
+
+### Request Body Example
+
+```json
+{
+  "SerialNumber": "12345ABC"
+}
+```
+
+## Response
+
+Returns JSON data from the Oracle Support Dashboard containing equipment information.
+
+<ResponseField name="data" type="string">
+  JSON string containing report data from Oracle Support Dashboard
+</ResponseField>
+
+<ResponseField name="error" type="string">
+  Error message if the request fails (only present on error)
+</ResponseField>
+
+### Success Response Example
+
+```json
+{
+  // Equipment data structure from Oracle Support Dashboard
+  // Varies based on the report configuration (id=2154)
+}
+```
+
+### Error Response Example
+
+```json
+{
+  "error": "Error al obtener datos. Status: 404, Content: Not Found"
+}
+```
+
+## Oracle Support Dashboard Integration
+
+This endpoint integrates with the Oracle Support Dashboard at:
+
+```
+https://azuappsrvuat01v.mcquay.com/SupportDashboard/Home/GetReportData
+```
+
+Parameters:
+- `id`: Report ID (fixed value: `2154`)
+- `parameters`: JSON string with serial number
+
+## Implementation
+
+```csharp HomeController.cs
+[HttpPost]
+public async Task<IActionResult> GetReportData([FromBody] SearchParameters parameters)
+{
+    try
+    {
+        var requestUrl = $"{BaseUrl}GetReportData?id=2154&parameters={{\"serial_number\":\"{parameters.SerialNumber}\"}}";
+        var response = await _httpClient.PostAsync(requestUrl, null);
+
+        if (response.IsSuccessStatusCode)
+        {
+            var jsonResult = await response.Content.ReadAsStringAsync();
+            return Json(jsonResult);
+        }
+
+        var errorContent = await response.Content.ReadAsStringAsync();
+        return Json(new { error = $"Error al obtener datos. Status: {response.StatusCode}, Content: {errorContent}" });
+    }
+    catch (Exception ex)
+    {
+        return Json(new { error = $"Error detallado: {ex.Message}" });
+    }
+}
+```
+
+## cURL Example
+
+```bash
+curl -X POST https://your-domain.com/Home/GetReportData \
+  -H "Content-Type: application/json" \
+  -d '{
+    "SerialNumber": "12345ABC"
+  }'
+```
+
+## Error Handling
+
+The endpoint handles several error scenarios:
+
+<AccordionGroup>
+  <Accordion title="HTTP Request Failure">
+    When the Oracle Support Dashboard returns a non-success status code:
+    
+    ```json
+    {
+      "error": "Error al obtener datos. Status: 500, Content: Internal Server Error"
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="Network Exception">
+    When a network or connection error occurs:
+    
+    ```json
+    {
+      "error": "Error detallado: Unable to connect to remote server"
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="Invalid Serial Number">
+    When the serial number doesn't exist in the Oracle system, the response structure depends on the Oracle Support Dashboard implementation.
+  </Accordion>
+</AccordionGroup>
+
+## Related Models
+
+### SearchParameters
+
+```csharp HomeController.cs
+public class SearchParameters
+{
+    public string SerialNumber { get; set; }
+}
+```
+
+## Next Steps
+
+<Card title="Save Label Data" icon="arrow-right" href="/api/save-label-data">
+  Learn how to save the retrieved data as label information
+</Card>

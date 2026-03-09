@@ -1,0 +1,90 @@
+---
+title: "Introduction"
+description: "Learn about MasterLabel, a production line error tracking system for logging label printing issues and generating reports for Oracle Support."
+---
+
+## What is MasterLabel?
+
+MasterLabel is a production line error tracking system designed to monitor and document recurring label printing errors in manufacturing environments. Built as an ASP.NET Core web application, it provides a structured approach to logging incidents, analyzing patterns, and generating detailed reports for Oracle Support teams.
+
+## The Problem It Solves
+
+Manufacturing production lines often experience recurring label printing errors that impact operations and require detailed documentation for vendor support. MasterLabel addresses this challenge by:
+
+- **Centralizing error tracking** - All label printing incidents are logged in a single SQL Server database
+- **Enabling pattern analysis** - Identify which production lines face the most issues and when they occur
+- **Streamlining support workflows** - Generate comprehensive reports for Oracle Support teams in the United States
+- **Providing data visibility** - Export data to Excel and create dynamic dashboards for stakeholder review
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card title="Serial Number Search" icon="magnifying-glass">
+    Query label data by serial number to quickly retrieve incident details from the Oracle Support Dashboard
+  </Card>
+  
+  <Card title="Label Data Logging" icon="database">
+    Capture comprehensive incident information including job details, order numbers, LPN, ship codes, and timestamps
+  </Card>
+  
+  <Card title="Oracle Support Integration" icon="plug">
+    Direct integration with Oracle Support Dashboard API to fetch and validate label information
+  </Card>
+  
+  <Card title="Production Line Tracking" icon="chart-line">
+    Track which production lines experience the most errors and identify temporal patterns
+  </Card>
+  
+  <Card title="Excel Export" icon="file-excel">
+    Export incident data to Excel for reporting and further analysis
+  </Card>
+  
+  <Card title="Dynamic Dashboards" icon="chart-bar">
+    Create visualizations to analyze error patterns by production line, time period, and incident type
+  </Card>
+</CardGroup>
+
+## Use Cases
+
+### Track Recurring Errors
+Document every instance of label printing failures with complete metadata including serial numbers, job information, and order details.
+
+### Generate Support Reports
+Compile structured incident reports with all necessary data points for Oracle Support investigations.
+
+### Identify Patterns
+Analyze when and where errors occur most frequently:
+- Which production lines have the highest error rates
+- Which weeks of the month show increased incidents
+- Which specific print jobs are most problematic
+
+### Data-Driven Decisions
+Use Excel exports and dashboards to make informed decisions about equipment maintenance, process improvements, and vendor escalations.
+
+## How It Works
+
+1. **Search** - Look up label information by serial number through the Oracle Support Dashboard integration
+2. **Log** - Save incident details to the SQL Server database with automatic timestamp tracking
+3. **Export** - Generate Excel reports containing all logged incidents
+4. **Analyze** - Create dashboards to visualize error patterns and trends
+5. **Report** - Submit comprehensive reports to Oracle Support with complete incident history
+
+## Technology Stack
+
+- **Backend**: ASP.NET Core with MVC pattern
+- **Database**: SQL Server (LocalDB for development, SQL Server for production)
+- **Frontend**: Razor Views with JavaScript
+- **External Integration**: Oracle Support Dashboard API
+- **Export Format**: Microsoft Excel
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Get MasterLabel up and running in minutes
+  </Card>
+  
+  <Card title="Incident Logging" icon="clipboard-list" href="/features/incident-logging">
+    Learn how to log label printing errors
+  </Card>
+</CardGroup>

@@ -1,0 +1,71 @@
+---
+title: "SearchParameters Model"
+description: "Query parameters for searching label data"
+---
+
+## Overview
+
+The `SearchParameters` model defines the search criteria for querying label printing error data. This lightweight model is used to filter and retrieve specific incident records from the Support Dashboard.
+
+## Usage
+
+This model is used in:
+- **GetReportData endpoint** (`POST /Home/GetReportData`) - Accepts SearchParameters to query label data by serial number
+
+## Class Definition
+
+```csharp
+namespace MasterLabel.Controllers
+{
+    public class SearchParameters
+    {
+        public string SerialNumber { get; set; }
+    }
+}
+```
+
+## Properties
+
+<ParamField path="SerialNumber" type="string" required>
+  The serial number to search for. This is used to retrieve label data and error reports for a specific product unit.
+</ParamField>
+
+## JSON Example
+
+```json
+{
+  "serialNumber": "SN123456789"
+}
+```
+
+## Usage Example
+
+When calling the GetReportData endpoint, send the SearchParameters in the request body:
+
+```javascript
+fetch('/Home/GetReportData', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    serialNumber: 'SN123456789'
+  })
+})
+.then(response => response.json())
+.then(data => console.log(data));
+```
+
+## Implementation Details
+
+The search parameters are transformed into a query string for the Support Dashboard API:
+
+```csharp
+var requestUrl = $"{BaseUrl}GetReportData?id=2154&parameters={{\"serial_number\":\"{parameters.SerialNumber}\"}}"
+```
+
+Note that the property name is converted from `SerialNumber` (PascalCase) to `serial_number` (snake_case) when constructing the external API request.
+
+## Related Endpoints
+
+- [GetReportData](/api/endpoints/get-report-data) - Retrieve label data using search parameters

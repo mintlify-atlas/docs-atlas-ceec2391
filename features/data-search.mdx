@@ -1,0 +1,175 @@
+---
+title: "Data Search"
+description: "Search production data by serial number using Oracle Support Dashboard integration"
+---
+
+## Overview
+
+The Data Search feature enables operators to quickly retrieve production information from the Oracle Support Dashboard by entering a serial number. This integration eliminates manual data entry and ensures accuracy when logging label printing incidents.
+
+## Search Workflow
+
+<Steps>
+  <Step title="Enter Serial Number">
+    Type the serial number of the affected unit into the Serial Number field on the incident logging form.
+  </Step>
+  
+  <Step title="Click Search">
+    Click the "Search" button to query the Oracle Support Dashboard for related production data.
+  </Step>
+  
+  <Step title="Review Retrieved Data">
+    The system automatically populates all available fields with data from Oracle, including job number, item description, order information, and shipping details.
+  </Step>
+  
+  <Step title="Adjust if Needed">
+    Review the autofilled data and make any necessary corrections before submitting the incident.
+  </Step>
+</Steps>
+
+## Search Parameters
+
+The search functionality uses a simple parameter model:
+
+```csharp
+public class SearchParameters
+{
+    public string SerialNumber { get; set; }
+}
+```
+
+Only the serial number is required to retrieve comprehensive production data from Oracle Support Dashboard.
+
+## GetReportData Endpoint
+
+The `GetReportData` endpoint handles communication with the Oracle Support Dashboard:
+
+```csharp
+[HttpPost]
+public async Task<IActionResult> GetReportData([FromBody] SearchParameters parameters)
+{
+    try
+    {
+        var requestUrl = $"{BaseUrl}GetReportData?id=2154&parameters={{\"serial_number\":\"{parameters.SerialNumber}\"}}";
+        var response = await _httpClient.PostAsync(requestUrl, null);
+
+        if (response.IsSuccessStatusCode)
+        {
+            var jsonResult = await response.Content.ReadAsStringAsync();
+            return Json(jsonResult);
+        }
+
+        var errorContent = await response.Content.ReadAsStringAsync();
+        return Json(new { error = $"Error al obtener datos. Status: {response.StatusCode}, Content: {errorContent}" });
+    }
+    catch (Exception ex)
+    {
+        return Json(new { error = $"Error detallado: {ex.Message}" });
+    }
+}
+```
+
+### Endpoint Configuration
+
+The Oracle Support Dashboard base URL is configured in the controller:
+
+```csharp
+private const string BaseUrl = "https://azuappsrvuat01v.mcquay.com/SupportDashboard/Home/";
+```
+
+### Request Format
+
+The endpoint constructs a GET request with query parameters:
+- `id=2154`: Report identifier for the label data report
+- `parameters`: JSON object containing the serial number to search
+
+### Response Handling
+
+- **Success**: Returns the JSON data from Oracle Support Dashboard, which contains all production information for the serial number
+- **Failure**: Returns an error object with status code and error details for troubleshooting
+- **Exception**: Returns detailed exception message for technical diagnosis
+
+## Oracle Support Dashboard Integration
+
+The search functionality integrates with Daikin's Oracle Support Dashboard, which serves as the central repository for production data. This integration:
+
+- Provides real-time access to Oracle ERP data
+- Ensures data consistency between systems
+- Reduces manual data entry errors
+- Accelerates incident logging process
+
+<Info>
+  The integration uses report ID `2154`, which is specifically configured to return label-related production data including job numbers, order details, and shipping information.
+</Info>
+
+## Retrieved Data Fields
+
+When a search is successful, the Oracle Support Dashboard returns data that populates these form fields:
+
+| Field | Description | Source System |
+|-------|-------------|---------------|
+| Job | Job number from production order | Oracle ERP |
+| Item | Item code or part number | Oracle ERP |
+| Description | Product description | Oracle ERP |
+| OrderNumber | Production order number | Oracle ERP |
+| OrderLine | Order line item number | Oracle ERP |
+| LPN | License Plate Number | Oracle WMS |
+| TagNumber | Physical tag identifier | Oracle WMS |
+| ShipCode | Ship-to destination code | Oracle ERP |
+| IRNO | Internal Receipt Number | Oracle ERP |
+| Subinv | Subinventory location | Oracle WMS |
+| Address | Full shipping address | Oracle ERP |
+
+## Error Handling
+
+The search endpoint includes comprehensive error handling:
+
+### HTTP Errors
+
+If the Oracle Support Dashboard returns a non-success status code, the endpoint returns:
+```json
+{
+  "error": "Error al obtener datos. Status: [StatusCode], Content: [ErrorDetails]"
+}
+```
+
+### Network Errors
+
+If a network exception occurs (timeout, connection failure, etc.), the endpoint returns:
+```json
+{
+  "error": "Error detallado: [ExceptionMessage]"
+}
+```
+
+### Client-Side Handling
+
+The front-end JavaScript handles these error responses and displays appropriate messages to the operator, allowing them to:
+- Retry the search
+- Manually enter the data
+- Report connectivity issues to IT support
+
+## Performance Considerations
+
+<Info>
+  The search uses asynchronous HTTP calls (`async/await`) to prevent blocking the application while waiting for Oracle Support Dashboard responses. This ensures the UI remains responsive even during slow network conditions.
+</Info>
+
+## Use Cases
+
+### Primary Use Case: Incident Logging
+
+When logging a label printing error, operators can search by serial number to quickly populate all production details, ensuring complete and accurate incident records.
+
+### Secondary Use Case: Data Verification
+
+Operators can use the search feature to verify production data before creating labels, helping prevent errors before they occur.
+
+### Support Use Case: Troubleshooting
+
+Support teams can search historical data to investigate patterns in label printing errors and identify root causes related to specific jobs, items, or production lines.
+
+## Related Features
+
+- [Incident Logging](/features/incident-logging) - Use search results to populate incident reports
+- [Reporting & Analytics](/features/reporting) - Analyze data collected from searched and logged incidents

@@ -1,0 +1,232 @@
+---
+title: "Incident Logging"
+description: "Learn how to log label printing errors in MasterLabel"
+---
+
+## Overview
+
+The Incident Logging feature allows production line operators to quickly report label printing errors by capturing critical production data. When a label fails to print correctly, operators use the web form to document the incident with detailed information from the affected unit.
+
+## Logging Workflow
+
+<Steps>
+  <Step title="Access the Form">
+    Navigate to the MasterLabel home page where the incident logging form is displayed.
+  </Step>
+  
+  <Step title="Fill in Required Fields">
+    Enter the production data from the affected label. Most fields support autofill from Oracle Support Dashboard by searching the serial number.
+  </Step>
+  
+  <Step title="Submit the Incident">
+    Click the "Confirm" button to save the incident to the database. The system validates and stores all captured information.
+  </Step>
+  
+  <Step title="Confirmation">
+    Receive immediate feedback confirming successful submission or identifying any errors.
+  </Step>
+</Steps>
+
+## Form Fields
+
+The incident logging form captures the following data points:
+
+<ParamField path="SerialNumber" type="string">
+  The unique serial number of the affected unit. Used as the primary identifier for searching Oracle Support Dashboard data.
+</ParamField>
+
+<ParamField path="Job" type="string">
+  The job number associated with the production order.
+</ParamField>
+
+<ParamField path="Item" type="string">
+  The item code or part number being manufactured.
+</ParamField>
+
+<ParamField path="Description" type="string">
+  Product description providing additional context about the item.
+</ParamField>
+
+<ParamField path="OrderNumber" type="decimal">
+  The production order number in the Oracle system.
+</ParamField>
+
+<ParamField path="OrderLine" type="string">
+  Specific line item within the production order.
+</ParamField>
+
+<ParamField path="LPN" type="string">
+  License Plate Number used for warehouse tracking and logistics.
+</ParamField>
+
+<ParamField path="TagNumber" type="string">
+  Physical tag identifier attached to the unit.
+</ParamField>
+
+<ParamField path="ShipCode" type="string">
+  Ship-to destination code indicating where the unit will be delivered.
+</ParamField>
+
+<ParamField path="IRNO" type="string">
+  Internal Receipt Number from the inventory system.
+</ParamField>
+
+<ParamField path="Subinv" type="string">
+  Subinventory location where the item is stored or processed.
+</ParamField>
+
+<ParamField path="Date" type="DateTime">
+  Date and time when the incident occurred. Defaults to current timestamp if not specified.
+</ParamField>
+
+<ParamField path="Address" type="string">
+  Full shipping address associated with the order. Supports multi-line text input.
+</ParamField>
+
+## Data Model
+
+The `ReportData` model represents the structure of incident data:
+
+```csharp
+namespace MasterLabel.Models
+{
+    public class ReportData
+    {
+        public string SerialNumber { get; set; }
+        public string Job { get; set; }
+        public string Item { get; set; }
+        public string Description { get; set; }
+        public string OrderNumber { get; set; }
+        public string OrderLine { get; set; }
+        public string LPN { get; set; }
+        public string TagNumber { get; set; }
+        public string ShipCode { get; set; }
+        public string IRNO { get; set; }
+        public string Subinv { get; set; }
+        public DateTime? Date { get; set; }
+        public string Address { get; set; }
+    }
+}
+```
+
+## Form Implementation
+
+The incident logging form is implemented in the Index view:
+
+```html
+<div class="container">
+    <button class="btn btn-primary-btn-block flabber btn-pending" id="search">Search</button>
+
+    <div class="form">
+        <label for="job"></label>
+        <input type="text" class="form-control" id="job" placeholder="Job">
+
+        <label for="item"></label>
+        <input type="text" class="form-control" id="item" placeholder="Item">
+
+        <label for="serial-Number"></label>
+        <input type="text" class="form-control" id="serial-Number" placeholder="Serial Number">
+
+        <label for="description"></label>
+        <input type="text" class="form-control" id="description" placeholder="Description">
+
+        <label for="order-Number"></label>
+        <input type="text" class="form-control" id="order-Number" placeholder="Order Number">
+
+        <label for="ordline"></label>
+        <input type="text" class="form-control" id="ordline" placeholder="Order line">
+
+        <label for="lpn"></label>
+        <input type="text" class="form-control" id="lpn" placeholder="LPN">
+
+        <label for="tag-Number"></label>
+        <input type="text" class="form-control" id="tag-Number" placeholder="Tag Number">
+
+        <label for="ship-Code"></label>
+        <input type="text" class="form-control" id="ship-Code" placeholder="ShipTo Code">
+
+        <label for="irno"></label>
+        <input type="text" class="form-control" id="irno" placeholder="IRNO">
+
+        <label for="subinv"></label>
+        <input type="text" class="form-control" id="subinv" placeholder="Subinv">
+
+        <label for="date"></label>
+        <input type="date" class="form-control" id="date" placeholder="Date">
+
+        <label for="address"></label>
+        <textarea id="address" name="address" rows="4" cols="50" placeholder="Address"></textarea>
+
+        <button class="btn" id="confirm">Confirm</button>
+    </div>
+</div>
+```
+
+## SaveLabelData Endpoint
+
+The `SaveLabelData` endpoint handles incident submission and database persistence:
+
+```csharp
+[HttpPost]
+public IActionResult SaveLabelData([FromBody] ReportData data)
+{
+    try
+    {
+        string connectionString = _configuration.GetConnectionString("SqlConnection");
+        using (SqlConnection connection = new SqlConnection(connectionString))
+        {
+            connection.Open();
+
+            string sql = @"INSERT INTO LabelData 
+                        (SerialNumber, Job, Item, Description, OrderNumber, OrderLine, 
+                         LPN, TagNumber, ShipCode, IRNO, Subinv, FullAddress, CreatedDate)
+                        VALUES 
+                        (@SerialNumber, @Job, @Item, @Description, @OrderNumber, @OrderLine,
+                         @LPN, @TagNumber, @ShipCode, @IRNO, @Subinv, @Address, @Date)";
+
+            using (SqlCommand command = new SqlCommand(sql, connection))
+            {
+                command.Parameters.AddWithValue("@SerialNumber", data.SerialNumber ?? (object)DBNull.Value);
+                command.Parameters.AddWithValue("@Job", data.Job ?? (object)DBNull.Value);
+                command.Parameters.AddWithValue("@Item", data.Item ?? (object)DBNull.Value);
+                command.Parameters.AddWithValue("@Description", data.Description ?? (object)DBNull.Value);
+                command.Parameters.AddWithValue("@OrderNumber", string.IsNullOrEmpty(data.OrderNumber) ? (object)DBNull.Value : decimal.Parse(data.OrderNumber));
+                command.Parameters.AddWithValue("@OrderLine", data.OrderLine ?? (object)DBNull.Value);
+                command.Parameters.AddWithValue("@LPN", data.LPN ?? (object)DBNull.Value);
+                command.Parameters.AddWithValue("@TagNumber", data.TagNumber ?? (object)DBNull.Value);
+                command.Parameters.AddWithValue("@ShipCode", data.ShipCode ?? (object)DBNull.Value);
+                command.Parameters.AddWithValue("@IRNO", data.IRNO ?? (object)DBNull.Value);
+                command.Parameters.AddWithValue("@Subinv", data.Subinv ?? (object)DBNull.Value);
+                command.Parameters.AddWithValue("@Address", data.Address ?? (object)DBNull.Value);
+                command.Parameters.AddWithValue("@Date", data.Date ?? DateTime.Now);
+
+                command.ExecuteNonQuery();
+            }
+        }
+
+        return Json(new { success = true, message = "Datos guardados correctamente" });
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "Error al guardar los datos en la base de datos");
+        return Json(new { success = false, message = ex.Message });
+    }
+}
+```
+
+### Key Features
+
+- **Null Handling**: All fields support null values, allowing operators to submit incomplete data when information is unavailable
+- **Type Conversion**: OrderNumber is automatically converted from string to decimal for database storage
+- **Default Timestamps**: If no date is provided, the system uses the current timestamp
+- **Error Logging**: Failed submissions are logged with detailed error information for troubleshooting
+
+<Info>
+  The endpoint uses parameterized queries to prevent SQL injection attacks and ensure data integrity.
+</Info>
+
+## Integration with Search
+
+The "Search" button allows operators to autofill form fields by querying the Oracle Support Dashboard. When a serial number is entered, clicking Search retrieves all associated production data, minimizing manual data entry and reducing errors.
+
+See [Data Search](/features/data-search) for details on the search functionality.

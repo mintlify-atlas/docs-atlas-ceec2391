@@ -1,0 +1,136 @@
+---
+title: "ReportData Model"
+description: "Data model for label printing error reports"
+---
+
+## Overview
+
+The `ReportData` model represents the complete data structure for a label printing error report. This model is used to capture all relevant information about a product label that failed to print correctly, including product details, order information, and location data.
+
+## Usage
+
+This model is used in:
+- **SaveLabelData endpoint** (`POST /Home/SaveLabelData`) - Accepts ReportData to log incidents
+- **SQL Database** - Stored in the `LabelData` table for historical tracking and reporting
+
+## Class Definition
+
+```csharp
+namespace MasterLabel.Models
+{
+    public class ReportData
+    {
+        public string SerialNumber { get; set; }
+        public string Job { get; set; }
+        public string Item { get; set; }
+        public string Description { get; set; }
+        public string OrderNumber { get; set; }
+        public string OrderLine { get; set; }
+        public string LPN { get; set; }
+        public string TagNumber { get; set; }
+        public string ShipCode { get; set; }
+        public string IRNO { get; set; }
+        public string Subinv { get; set; }
+        public DateTime? Date { get; set; }
+        public string Address { get; set; }
+    }
+}
+```
+
+## Properties
+
+<ResponseField name="SerialNumber" type="string">
+  The unique serial number of the product. This is the primary identifier for tracking individual units.
+</ResponseField>
+
+<ResponseField name="Job" type="string">
+  The job identifier associated with the manufacturing or assembly process.
+</ResponseField>
+
+<ResponseField name="Item" type="string">
+  The item code or SKU identifying the product type.
+</ResponseField>
+
+<ResponseField name="Description" type="string">
+  A human-readable description of the product or item.
+</ResponseField>
+
+<ResponseField name="OrderNumber" type="string">
+  The order number associated with this product. Stored as decimal in the database.
+</ResponseField>
+
+<ResponseField name="OrderLine" type="string">
+  The specific line number within the order.
+</ResponseField>
+
+<ResponseField name="LPN" type="string">
+  License Plate Number - A unique identifier for the shipping container or pallet.
+</ResponseField>
+
+<ResponseField name="TagNumber" type="string">
+  The tag or label number that was being printed when the error occurred.
+</ResponseField>
+
+<ResponseField name="ShipCode" type="string">
+  The shipping code or destination identifier.
+</ResponseField>
+
+<ResponseField name="IRNO" type="string">
+  Internal Reference Number - An internal tracking identifier.
+</ResponseField>
+
+<ResponseField name="Subinv" type="string">
+  Subinventory location code where the product is located.
+</ResponseField>
+
+<ResponseField name="Date" type="DateTime?">
+  The date and time when the error occurred. Nullable - defaults to current timestamp if not provided.
+</ResponseField>
+
+<ResponseField name="Address" type="string">
+  The full shipping or destination address. Stored as `FullAddress` in the database.
+</ResponseField>
+
+## JSON Example
+
+```json
+{
+  "serialNumber": "SN123456789",
+  "job": "JOB-2024-001",
+  "item": "ITEM-ABC-123",
+  "description": "Industrial Air Handler Unit",
+  "orderNumber": "1234567",
+  "orderLine": "10",
+  "lpn": "LPN-9876543210",
+  "tagNumber": "TAG-001",
+  "shipCode": "SHIP-US-WEST",
+  "irno": "IR-2024-0315",
+  "subinv": "WH-A-01",
+  "date": "2026-03-09T14:30:00Z",
+  "address": "123 Industrial Pkwy, Manufacturing City, CA 90210"
+}
+```
+
+## Database Mapping
+
+When saved to the SQL database, the model fields map to the `LabelData` table:
+
+| Model Property | Database Column | Notes |
+|----------------|----------------|-------|
+| SerialNumber | SerialNumber | |
+| Job | Job | |
+| Item | Item | |
+| Description | Description | |
+| OrderNumber | OrderNumber | Converted to decimal |
+| OrderLine | OrderLine | |
+| LPN | LPN | |
+| TagNumber | TagNumber | |
+| ShipCode | ShipCode | |
+| IRNO | IRNO | |
+| Subinv | Subinv | |
+| Address | FullAddress | Different column name |
+| Date | CreatedDate | Defaults to DateTime.Now |
+
+## Related Endpoints
+
+- [SaveLabelData](/api/endpoints/save-label-data) - Save label error data using this model

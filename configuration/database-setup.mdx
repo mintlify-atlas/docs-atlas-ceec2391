@@ -1,0 +1,163 @@
+---
+title: "Database Setup"
+description: "Configure SQL Server database for MasterLabel"
+---
+
+## Overview
+
+MasterLabel requires a SQL Server database to store label data. The application uses a single table `LabelData` to track all label information including serial numbers, job details, and shipping information.
+
+## Requirements
+
+- **SQL Server**: LocalDB, SQL Server Express, or SQL Server (any edition)
+- **Compatibility Level**: SQL Server 2019 (150) or higher
+- **Database Name**: `MasterLabelDB` (configurable)
+
+<Warning>
+The database must be created before running the application. MasterLabel does not automatically create the database on startup.
+</Warning>
+
+## Database Creation
+
+<Steps>
+  <Step title="Create the Database">
+    Connect to your SQL Server instance and create the `MasterLabelDB` database:
+
+    ```sql
+    USE [master]
+    GO
+
+    CREATE DATABASE [MasterLabelDB]
+     CONTAINMENT = NONE
+     ON PRIMARY 
+    ( NAME = N'MasterLabelDB', FILENAME = N'C:\\Data\\MasterLabelDB.mdf' , 
+      SIZE = 8192KB , MAXSIZE = UNLIMITED, FILEGROWTH = 65536KB )
+     LOG ON 
+    ( NAME = N'MasterLabelDB_log', FILENAME = N'C:\\Data\\MasterLabelDB_log.ldf' , 
+      SIZE = 8192KB , MAXSIZE = 2048GB , FILEGROWTH = 65536KB )
+     WITH CATALOG_COLLATION = DATABASE_DEFAULT
+    GO
+
+    ALTER DATABASE [MasterLabelDB] SET COMPATIBILITY_LEVEL = 150
+    GO
+    ```
+
+    <Note>
+    Adjust the `FILENAME` paths to match your SQL Server configuration. For LocalDB, you can omit the file paths.
+    </Note>
+  </Step>
+
+  <Step title="Create the LabelData Table">
+    Switch to the new database and create the main `LabelData` table:
+
+    ```sql
+    USE [MasterLabelDB]
+    GO
+
+    SET ANSI_NULLS ON
+    GO
+    SET QUOTED_IDENTIFIER ON
+    GO
+
+    CREATE TABLE [dbo].[LabelData](
+        [Id] [int] IDENTITY(1,1) NOT NULL,
+        [JobId] [int] NULL,
+        [SerialNumber] [varchar](50) NULL,
+        [Job] [varchar](50) NULL,
+        [Item] [varchar](50) NULL,
+        [Description] [varchar](max) NULL,
+        [OrderNumber] [decimal](18, 0) NULL,
+        [OrderLine] [varchar](20) NULL,
+        [LPN] [varchar](50) NULL,
+        [TagNumber] [varchar](100) NULL,
+        [ShipCode] [varchar](10) NULL,
+        [IRNO] [varchar](100) NULL,
+        [Subinv] [varchar](50) NULL,
+        [FullAddress] [varchar](max) NULL,
+        [CreatedDate] [datetime] NULL,
+     CONSTRAINT [PK__LabelData__3214EC07] PRIMARY KEY CLUSTERED 
+    (
+        [Id] ASC
+    ) ON [PRIMARY]
+    ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
+    GO
+    ```
+  </Step>
+
+  <Step title="Create Index for Performance">
+    Add an index on `SerialNumber` for faster lookups:
+
+    ```sql
+    CREATE NONCLUSTERED INDEX [IX_LabelData_SerialNumber] 
+    ON [dbo].[LabelData] ([SerialNumber] ASC)
+    GO
+    ```
+  </Step>
+
+  <Step title="Add Default Constraint">
+    Set the `CreatedDate` to automatically use the current timestamp:
+
+    ```sql
+    ALTER TABLE [dbo].[LabelData] 
+    ADD CONSTRAINT [DF_LabelData_CreatedDate] 
+    DEFAULT (getdate()) FOR [CreatedDate]
+    GO
+    ```
+  </Step>
+</Steps>
+
+## LabelData Table Structure
+
+The `LabelData` table stores all label information with the following columns:
+
+| Column | Type | Description |
+|--------|------|-------------|
+| **Id** | int (Identity) | Primary key, auto-incrementing |
+| **JobId** | int | Job identifier |
+| **SerialNumber** | varchar(50) | Unique serial number for the label (indexed) |
+| **Job** | varchar(50) | Job name or reference |
+| **Item** | varchar(50) | Item code or SKU |
+| **Description** | varchar(max) | Detailed item description |
+| **OrderNumber** | decimal(18, 0) | Associated order number |
+| **OrderLine** | varchar(20) | Order line item reference |
+| **LPN** | varchar(50) | License Plate Number |
+| **TagNumber** | varchar(100) | Tag identifier |
+| **ShipCode** | varchar(10) | Shipping code |
+| **IRNO** | varchar(100) | Internal reference number |
+| **Subinv** | varchar(50) | Sub-inventory location |
+| **FullAddress** | varchar(max) | Complete shipping address |
+| **CreatedDate** | datetime | Record creation timestamp (defaults to current date/time) |
+
+<Tip>
+The `SerialNumber` field is indexed to optimize search queries. Use this field as the primary lookup key when querying label data.
+</Tip>
+
+## Complete Setup Script
+
+The complete database setup script is available in the source repository at `MasterLabel.sql`. You can execute this script directly in SQL Server Management Studio or using the `sqlcmd` utility:
+
+```bash
+sqlcmd -S .\\SQLEXPRESS -i MasterLabel.sql
+```
+
+## Verification
+
+After creating the database and table, verify the setup:
+
+```sql
+USE [MasterLabelDB]
+GO
+
+SELECT 
+    TABLE_NAME, 
+    COLUMN_NAME, 
+    DATA_TYPE,
+    IS_NULLABLE
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_NAME = 'LabelData'
+ORDER BY ORDINAL_POSITION
+```
+
+<Warning>
+Ensure that the SQL Server service account or the application pool identity has appropriate permissions (db_datareader, db_datawriter) on the MasterLabelDB database.
+</Warning>

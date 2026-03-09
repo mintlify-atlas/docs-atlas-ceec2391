@@ -1,0 +1,178 @@
+---
+title: "Connection Strings"
+description: "Configure database connection strings for MasterLabel"
+---
+
+## Overview
+
+MasterLabel uses ADO.NET with `System.Data.SqlClient` to connect to SQL Server. The connection string is configured in `appsettings.json` and can be overridden per environment.
+
+## Configuration Structure
+
+The connection string is defined in the `ConnectionStrings` section of your configuration file:
+
+```json
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning"
+    }
+  },
+  "AllowedHosts": "*",
+  "ConnectionStrings": {
+    "SqlConnection": "Server=(localdb)\\mssqllocaldb;Database=MasterLabelDB;Trusted_Connection=True;"
+  }
+}
+```
+
+<Note>
+The connection string key **must** be named `SqlConnection` as this is referenced throughout the application code.
+</Note>
+
+## Environment-Specific Configuration
+
+### Development (LocalDB)
+
+For local development using SQL Server LocalDB:
+
+**appsettings.Development.json**
+```json
+{
+  "ConnectionStrings": {
+    "SqlConnection": "Server=(localdb)\\mssqllocaldb;Database=MasterLabelDB;Trusted_Connection=True;"
+  }
+}
+```
+
+<Tip>
+LocalDB is automatically installed with Visual Studio and is perfect for development. No separate SQL Server installation required.
+</Tip>
+
+### Production Configurations
+
+<CodeGroup>
+```json Windows Authentication
+{
+  "ConnectionStrings": {
+    "SqlConnection": "Server=SQLSERVER01;Database=MasterLabelDB;Integrated Security=True;TrustServerCertificate=True;"
+  }
+}
+```
+
+```json SQL Server Authentication
+{
+  "ConnectionStrings": {
+    "SqlConnection": "Server=SQLSERVER01;Database=MasterLabelDB;User Id=masterlabel_app;Password=YourSecurePassword;TrustServerCertificate=True;"
+  }
+}
+```
+
+```json SQL Server Express
+{
+  "ConnectionStrings": {
+    "SqlConnection": "Server=.\\SQLEXPRESS;Database=MasterLabelDB;Trusted_Connection=True;TrustServerCertificate=True;"
+  }
+}
+```
+
+```json Azure SQL Database
+{
+  "ConnectionStrings": {
+    "SqlConnection": "Server=tcp:yourserver.database.windows.net,1433;Database=MasterLabelDB;User ID=youradmin;Password=YourPassword;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
+  }
+}
+```
+</CodeGroup>
+
+## Connection String Parameters
+
+Common connection string parameters used by MasterLabel:
+
+| Parameter | Description | Example |
+|-----------|-------------|----------|
+| **Server** | SQL Server instance name or address | `(localdb)\\mssqllocaldb`, `localhost`, `192.168.1.100` |
+| **Database** | Database name | `MasterLabelDB` |
+| **Trusted_Connection** | Use Windows Authentication | `True` or `False` |
+| **Integrated Security** | Alternative to Trusted_Connection | `True` or `SSPI` |
+| **User Id** | SQL Server login username | `masterlabel_app` |
+| **Password** | SQL Server login password | `YourPassword` |
+| **TrustServerCertificate** | Skip certificate validation (dev/test only) | `True` or `False` |
+| **Encrypt** | Encrypt the connection | `True` or `False` |
+| **Connection Timeout** | Connection timeout in seconds | `30` |
+
+<Warning>
+For production environments using SQL Server 2022 or Azure SQL, encryption is enabled by default. Add `TrustServerCertificate=True` for self-signed certificates or `Encrypt=False` for non-encrypted connections (not recommended).
+</Warning>
+
+## Security Best Practices
+
+<Steps>
+  <Step title="Use Environment Variables">
+    Store sensitive connection strings in environment variables instead of configuration files:
+
+    ```bash
+    # Set environment variable
+    setx ConnectionStrings__SqlConnection "Server=PROD01;Database=MasterLabelDB;User Id=app_user;Password=SecurePass123"
+    ```
+
+    ASP.NET Core automatically reads connection strings from environment variables using the `__` (double underscore) separator.
+  </Step>
+
+  <Step title="Use User Secrets in Development">
+    For local development, store connection strings in User Secrets:
+
+    ```bash
+    dotnet user-secrets init
+    dotnet user-secrets set "ConnectionStrings:SqlConnection" "Server=localhost;Database=MasterLabelDB;User Id=dev_user;Password=DevPass123"
+    ```
+  </Step>
+
+  <Step title="Use Azure Key Vault or Configuration Providers">
+    For production deployments, integrate with secure secret management:
+
+    - Azure Key Vault
+    - AWS Secrets Manager
+    - HashiCorp Vault
+    - Azure App Configuration
+  </Step>
+</Steps>
+
+<Tip>
+**Never commit connection strings with passwords to source control.** Use `.gitignore` to exclude `appsettings.Production.json` and other environment-specific configuration files containing credentials.
+</Tip>
+
+## Verifying Configuration
+
+To verify your connection string is working, you can test it using `sqlcmd`:
+
+```bash
+# Test LocalDB connection
+sqlcmd -S "(localdb)\\mssqllocaldb" -d MasterLabelDB -E -Q "SELECT DB_NAME()"
+
+# Test SQL Server with Windows Auth
+sqlcmd -S SQLSERVER01 -d MasterLabelDB -E -Q "SELECT DB_NAME()"
+
+# Test SQL Server with SQL Auth
+sqlcmd -S SQLSERVER01 -d MasterLabelDB -U masterlabel_app -P YourPassword -Q "SELECT DB_NAME()"
+```
+
+## Troubleshooting
+
+### Common Connection Issues
+
+**"Cannot open database \"MasterLabelDB\" requested by the login"**
+- Ensure the database exists
+- Verify the user has permissions on the database
+
+**"A connection was successfully established, but then an error occurred during the login process"**
+- Add `TrustServerCertificate=True` to your connection string for SQL Server 2022+
+
+**"Login failed for user"**
+- Verify SQL Server authentication is enabled (for SQL Auth)
+- Check username and password are correct
+- Ensure the user exists and has proper permissions
+
+<Note>
+MasterLabel uses the `System.Data.SqlClient` NuGet package (v4.9.0) for database connectivity. This is compatible with .NET 8.0 and all modern SQL Server versions.
+</Note>

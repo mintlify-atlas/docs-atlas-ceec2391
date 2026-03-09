@@ -1,0 +1,80 @@
+---
+title: 'API Overview'
+description: 'Overview of MasterLabel REST API endpoints'
+---
+
+## Introduction
+
+The MasterLabel API is built with ASP.NET Core MVC and provides REST endpoints for retrieving report data from Oracle Support Dashboard and saving label data to a SQL database.
+
+## Base URL
+
+All API endpoints follow the ASP.NET Core MVC pattern:
+
+```
+/Home/{action}
+```
+
+Where `{action}` corresponds to the controller action method name.
+
+## Request/Response Format
+
+All API endpoints:
+- Accept JSON request bodies
+- Return JSON responses
+- Use HTTP POST method
+- Content-Type: `application/json`
+
+## Authentication
+
+Currently, the API does not require authentication. Endpoints are publicly accessible within the network.
+
+## Available Endpoints
+
+<CardGroup cols={2}>
+  <Card title="Get Report Data" icon="download" href="/api/get-report-data">
+    Retrieve equipment report data by serial number from Oracle Support Dashboard
+  </Card>
+  
+  <Card title="Save Label Data" icon="floppy-disk" href="/api/save-label-data">
+    Save label information to the SQL database
+  </Card>
+</CardGroup>
+
+## Integration
+
+The API integrates with:
+
+- **Oracle Support Dashboard**: External system at `https://azuappsrvuat01v.mcquay.com/SupportDashboard/`
+- **SQL Server Database**: Stores label data in the `LabelData` table
+
+## Error Handling
+
+All endpoints return JSON responses with error information when operations fail:
+
+```json
+{
+  "error": "Error message describing what went wrong"
+}
+```
+
+Or for save operations:
+
+```json
+{
+  "success": false,
+  "message": "Detailed error message"
+}
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Get Report Data" icon="arrow-right" href="/api/get-report-data">
+    Learn how to retrieve report data
+  </Card>
+  
+  <Card title="Save Label Data" icon="arrow-right" href="/api/save-label-data">
+    Learn how to save label data
+  </Card>
+</CardGroup>
