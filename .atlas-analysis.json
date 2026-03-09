@@ -1,0 +1,74 @@
+{
+  "projectType": "saas",
+  "projectName": "MasterLabel",
+  "projectDescription": "Production line error tracking system for generating detailed reports and dashboards to identify label printing issues.",
+  "theme": "linden",
+  "primaryColor": "#2563eb",
+  "lightColor": "#3b82f6",
+  "darkColor": "#1e40af",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Core Features",
+            "pages": [
+              "features/incident-logging",
+              "features/data-search",
+              "features/reporting"
+            ]
+          },
+          {
+            "group": "Configuration",
+            "pages": [
+              "configuration/database-setup",
+              "configuration/connection-strings",
+              "configuration/deployment"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Endpoints",
+            "pages": [
+              "api/overview",
+              "api/get-report-data",
+              "api/save-label-data"
+            ]
+          },
+          {
+            "group": "Models",
+            "pages": [
+              "api/models/report-data",
+              "api/models/search-parameters"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Serial number-based incident search",
+    "Label data logging to SQL Server",
+    "Integration with Oracle Support Dashboard",
+    "Production line error tracking",
+    "Excel export capabilities"
+  ],
+  "publicApiSurface": [
+    "POST /Home/GetReportData",
+    "POST /Home/SaveLabelData",
+    "ReportData model",
+    "SearchParameters model"
+  ]
+}
