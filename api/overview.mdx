@@ -11,7 +11,7 @@ The MasterLabel API is built with ASP.NET Core MVC and provides REST endpoints f
 
 All API endpoints follow the ASP.NET Core MVC pattern:
 
-```
+```http
 /Home/{action}
 ```
 
@@ -29,7 +29,7 @@ All API endpoints:
 
 Currently, the API does not require authentication. Endpoints are publicly accessible within the network.
 
-## Available Endpoints
+## API Endpoints
 
 <CardGroup cols={2}>
   <Card title="Get Report Data" icon="download" href="/api/get-report-data">
@@ -40,6 +40,16 @@ Currently, the API does not require authentication. Endpoints are publicly acces
     Save label information to the SQL database
   </Card>
 </CardGroup>
+
+## UI Routes
+
+The application also provides web interface routes:
+
+| Route | Method | Description |
+|-------|--------|-------------|
+| `/` or `/Home/Index` | GET | Main application page with search and data entry form |
+| `/Home/Privacy` | GET | Privacy policy page |
+| `/Home/Error` | GET | Error display page |
 
 ## Integration
 
